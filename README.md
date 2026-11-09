@@ -4,19 +4,19 @@ A small Vue 3 plugin for consuming Server-Sent Events (SSE). It is designed to b
 
 ## Install
 
-After publishing this package to npm:
+Install from npm after the first release:
 
 ```bash
 npm install vue-sse-link
 ```
 
-Or install directly from a public GitHub repository (replace `YOUR_ACCOUNT`):
+Until then, install directly from the public GitHub repository:
 
 ```bash
-npm install github:YOUR_ACCOUNT/vue-sse-link
+npm install github:longyunmo/vue-sse-link
 ```
 
-The Git install runs `prepare` to build the package. To install from a local clone, run `npm install /path/to/vue-sse-link` in the consuming project. The import name stays `vue-sse-link` in all three cases.
+The Git install runs `prepare` to build the package. To install from a local clone, run `npm install /path/to/vue-sse-link` in the consuming project. The import name stays `vue-sse-link` in all cases. GitHub installation requires the repository to be public.
 
 Vue 3 is a peer dependency. This package uses the browser's native `EventSource` and manages reconnect attempts with a capped backoff delay. `EventSource` supports `withCredentials` but not arbitrary request headers; pass an EventSource polyfill through `eventSourceFactory` if your server requires bearer headers.
 
@@ -101,8 +101,10 @@ You can also create an isolated client without Vue injection by calling `createS
 ```bash
 npm install
 npm run build
-npm publish
+npm pack --dry-run
 ```
+
+To publish a release to npm, sign in with `npm login`, then run `npm publish` from the repository root. The package name `vue-sse-link` must be available on npm, and the publishing account needs permission to use it.
 
 The build emits ESM, CommonJS, and TypeScript declarations in `dist/`. The package leaves Vue external so consuming applications use their own Vue installation.
 

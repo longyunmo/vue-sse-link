@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "A small Vue 3 plugin for managing Server-Sent Events connections.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/longyunmo/vue-sse-link.git"
+  },
+  "homepage": "https://github.com/longyunmo/vue-sse-link#readme",
+  "bugs": {
+    "url": "https://github.com/longyunmo/vue-sse-link/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "files": ["dist", "README.md", "LICENSE"],
