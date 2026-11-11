@@ -3,3 +3,10 @@ dist/
 coverage/
 .DS_Store
 npm-debug.log*
+.name
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+.npmrc
