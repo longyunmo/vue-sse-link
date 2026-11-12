@@ -4,13 +4,13 @@ A small Vue 3 plugin for consuming Server-Sent Events (SSE). It is designed to b
 
 ## Install
 
-Install from npm after the first release:
+Install from npm:
 
 ```bash
 npm install vue-sse-link
 ```
 
-Until then, install directly from the public GitHub repository:
+You can also install directly from the public GitHub repository:
 
 ```bash
 npm install github:longyunmo/vue-sse-link
@@ -93,6 +93,38 @@ sse.connect('/api/events', {
   onMessage: (message) => console.log(message.raw),
 })
 ```
+
+## Token authentication
+
+Native `EventSource` cannot set an `Authorization` header. When your SSE endpoint accepts a token in its query string, provide a getter that reads the application's token cache and returns `null` if the token is missing or expired. The getter runs on every connection and retry. The query parameter defaults to `token` and can be changed with `paramName`:
+
+```ts
+function getValidToken(): string | null {
+  const token = localStorage.getItem('access_token')
+  const expiresAt = Number(localStorage.getItem('access_token_expires_at'))
+  return token && expiresAt > Date.now() ? token : null
+}
+
+const sse = useSSE()
+sse.connect('/api/events?channel=updates', {
+  auth: {
+    getToken: getValidToken,
+    paramName: 'token',
+  },
+})
+```
+
+After saving a refreshed token to the cache, call `sse.reconnect()` to close the old connection and connect with the new token. On logout, clear the application's token cache and call `sse.close()`:
+
+```ts
+saveTokenToCache(newToken)
+sse.reconnect()
+
+clearTokenCache()
+sse.close()
+```
+
+The library does not own or clear your token cache. Query-string tokens can appear in server and proxy logs, so use HTTPS and short-lived tokens. If your server supports authorization headers, provide an `eventSourceFactory` backed by an EventSource polyfill instead.
 
 You can also create an isolated client without Vue injection by calling `createSSEClient()`. This is useful in tests or non-component modules.
 

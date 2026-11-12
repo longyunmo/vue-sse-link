@@ -10,7 +10,18 @@ export interface SSEMessage<T = unknown> {
   origin: string
 }
 
+export interface SSEAuthOptions {
+  /** Return the current, unexpired token from the application's token store. */
+  getToken: () => string | null | undefined
+  /** Query parameter used for the token. Defaults to `token`. */
+  paramName?: string
+  /** Optional validation for token formats or expiry rules owned by the application. */
+  isTokenValid?: (token: string) => boolean
+}
+
 export interface SSEConnectOptions {
+  /** Add a fresh token to the EventSource URL every time a connection is opened. */
+  auth?: SSEAuthOptions
   /** Whether to send cookies for cross-origin requests. */
   withCredentials?: boolean
   /** Parse message data as JSON. Invalid JSON is returned as the original string. */
@@ -50,6 +61,8 @@ export interface SSEClient {
   readonly lastMessage: Readonly<Ref<SSEMessage | null>>
   readonly error: Readonly<Ref<Event | Error | null>>
   connect(url: string, options?: SSEConnectOptions): void
+  /** Close the current connection and reconnect using the current options and latest token. */
+  reconnect(): void
   /** Subscribe to a named server event; returns an unsubscribe function. */
   on<T = unknown>(eventName: string, handler: (message: SSEMessage<T>) => void): () => void
   close(): void
@@ -93,6 +106,12 @@ export function createSSEClient(): SSEClient {
       activeOptions = options
       openConnection()
     },
+    reconnect() {
+      if (!activeUrl) return
+      client.close()
+      retryCount = 0
+      openConnection()
+    },
     on(eventName, handler) {
       const handlers = listeners.get(eventName) ?? new Set()
       handlers.add(handler as (message: SSEMessage) => void)
@@ -126,11 +145,19 @@ export function createSSEClient(): SSEClient {
   }
 
   function openConnection() {
-    const url = activeUrl
     const options = activeOptions
     const currentGeneration = ++generation
-    status.value = 'connecting'
     error.value = null
+    let url = activeUrl
+    if (options.auth) {
+      const token = options.auth.getToken()
+      if (!token || (options.auth.isTokenValid && !options.auth.isTokenValid(token))) {
+        status.value = 'closed'
+        return
+      }
+      url = addQueryParameter(url, options.auth.paramName ?? 'token', token)
+    }
+    status.value = 'connecting'
     const factory = options.eventSourceFactory ?? ((target, init) => new EventSource(target, init))
     const nextSource = factory(url, { withCredentials: options.withCredentials })
     source = nextSource
@@ -220,6 +247,17 @@ export function createSSEClient(): SSEClient {
     source.addEventListener(eventName, listener)
   }
   return client
+}
+
+function addQueryParameter(url: string, name: string, value: string): string {
+  const hashIndex = url.indexOf('#')
+  const hash = hashIndex >= 0 ? url.slice(hashIndex) : ''
+  const urlWithoutHash = hashIndex >= 0 ? url.slice(0, hashIndex) : url
+  const queryIndex = urlWithoutHash.indexOf('?')
+  const path = queryIndex >= 0 ? urlWithoutHash.slice(0, queryIndex) : urlWithoutHash
+  const params = new URLSearchParams(queryIndex >= 0 ? urlWithoutHash.slice(queryIndex + 1) : '')
+  params.set(name, value)
+  return `${path}?${params.toString()}${hash}`
 }
 
 function toMessage(event: MessageEvent, eventName: string, parseJSON = true): SSEMessage {
